@@ -11,33 +11,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ------------------------------------------------------
+      # 🧱 Checkout Repository
+      # ------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ------------------------------------------------------
+      # 🧰 Setup Terraform
+      # ------------------------------------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.0
 
+      # ------------------------------------------------------
+      # ⚙️ Terraform Init + Validate
+      # ------------------------------------------------------
       - name: Terraform Init
         run: terraform init
 
       - name: Terraform Validate
         run: terraform validate
 
-      # -----------------------------
+      # ------------------------------------------------------
       # 🔍 Run Checkov - CLI Output
-      # -----------------------------
+      # ------------------------------------------------------
       - name: Run Checkov (CLI)
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
-          soft_fail: true
+          soft_fail: true               # Soft fail even if issues found
           output_format: cli
 
-      # -----------------------------
+      # ------------------------------------------------------
       # 📊 Run Checkov - JSON Report
-      # -----------------------------
+      # ------------------------------------------------------
       - name: Run Checkov (JSON)
         uses: bridgecrewio/checkov-action@v12
         with:
@@ -46,31 +55,41 @@ jobs:
           output_format: json
           output_file_path: checkov-report.json
 
-      # -----------------------------
-      # 📤 Upload Checkov JSON as artifact
-      # -----------------------------
+      # ------------------------------------------------------
+      # 📤 Upload Checkov Report Artifact
+      # ------------------------------------------------------
       - name: Upload Checkov Report
         uses: actions/upload-artifact@v4
         with:
           name: checkov-report
           path: checkov-report.json
+          retention-days: 90
 
-      # -----------------------------
-      # ⚠️ Add Inline Annotations for Failed Checks
-      # -----------------------------
+      # ------------------------------------------------------
+      # ⚠️ Display Inline Annotations in Logs
+      # ------------------------------------------------------
       - name: Display Checkov Annotations
         run: |
           echo "=== Checkov Failed Checks (Inline Annotations) ==="
-          cat checkov-report.json | jq -r '.results.failed_checks[] | "::error file=\(.file_path),line=\(.file_line_range[0])::\(.check_id) - \(.check_name)"' || echo "No failed checks"
+          if [ -f checkov-report.json ]; then
+            cat checkov-report.json | jq -r '.results.failed_checks[] | "::error file=\(.file_path),line=\(.file_line_range[0])::\(.check_id) - \(.check_name)"' || echo "No failed checks"
+          else
+            echo "No Checkov report found"
+          fi
 
-      # -----------------------------
-      # 📦 Terraform Plan & Apply
-      # -----------------------------
+      # ------------------------------------------------------
+      # 📦 Terraform Plan & Apply (with AWS Credentials)
+      # ------------------------------------------------------
       - name: Terraform Plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-south-1
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-south-1
         run: terraform apply -auto-approve tfplan
