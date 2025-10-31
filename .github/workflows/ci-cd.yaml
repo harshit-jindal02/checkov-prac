@@ -41,7 +41,7 @@ jobs:
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
-          soft_fail: true               # Soft fail even if issues found
+          soft_fail: false
           output_format: cli
 
       # ------------------------------------------------------
@@ -51,7 +51,7 @@ jobs:
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
-          soft_fail: true
+          soft_fail: false
           output_format: json
           output_file_path: checkov-report.json
 
