@@ -3,7 +3,7 @@ variable "region" {
 }
 
 variable "bucket_name" {
-  default = "checkov-insecure-bucket-demo"
+  default = "checkov-insecure-bucket-demo-02"
 }
 
 variable "environment" {
