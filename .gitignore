@@ -5,3 +5,7 @@
 crash.log
 *.tfplan
 
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
