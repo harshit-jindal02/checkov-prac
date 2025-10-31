@@ -1,0 +1,76 @@
+name: Terraform CI/CD with Checkov
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      # -----------------------------
+      # 🔍 Run Checkov - CLI Output
+      # -----------------------------
+      - name: Run Checkov (CLI)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          soft_fail: true
+          output_format: cli
+
+      # -----------------------------
+      # 📊 Run Checkov - JSON Report
+      # -----------------------------
+      - name: Run Checkov (JSON)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          soft_fail: true
+          output_format: json
+          output_file_path: checkov-report.json
+
+      # -----------------------------
+      # 📤 Upload Checkov JSON as artifact
+      # -----------------------------
+      - name: Upload Checkov Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-report
+          path: checkov-report.json
+
+      # -----------------------------
+      # ⚠️ Add Inline Annotations for Failed Checks
+      # -----------------------------
+      - name: Display Checkov Annotations
+        run: |
+          echo "=== Checkov Failed Checks (Inline Annotations) ==="
+          cat checkov-report.json | jq -r '.results.failed_checks[] | "::error file=\(.file_path),line=\(.file_line_range[0])::\(.check_id) - \(.check_name)"' || echo "No failed checks"
+
+      # -----------------------------
+      # 📦 Terraform Plan & Apply
+      # -----------------------------
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: terraform apply -auto-approve tfplan

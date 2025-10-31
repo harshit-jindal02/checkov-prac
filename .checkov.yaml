@@ -1,0 +1,17 @@
+# Global Checkov configuration
+
+# Allow pipeline to continue even if issues found
+soft-fail: true
+
+# Enable framework scanning (Terraform in this case)
+framework: terraform
+
+# Optional: skip specific checks to see soft-fail behavior
+skip-check:
+  - CKV_AWS_145    # Skip “public read access” to test skip behavior
+
+# Show only failed checks (less noise)
+quiet: true
+
+# Include guidelines URLs in report output
+output: cli
