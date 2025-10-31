@@ -1,7 +1,7 @@
 # Global Checkov configuration
 
 # Allow pipeline to continue even if issues found
-soft-fail: true
+soft-fail: false
 
 # Enable framework scanning (Terraform in this case)
 framework: terraform
